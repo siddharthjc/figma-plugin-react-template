@@ -1,5 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../styles/ui.css';
+
+// We'll remove these imports and get the SVG list from the plugin
+// import Vector1 from '../assets/Vector.svg';
+// import Vector2 from '../assets/Vector-1.svg';
+
+// ... (keep existing ChevronDown and CustomSelect components)
 
 function ChevronDown(props: JSX.IntrinsicElements["svg"]) {
   return (
@@ -23,8 +29,10 @@ function CustomSelect({ value, onChange, options }: { value: string, onChange: (
 }
 
 function App() {
-  const [primaryColor, setPrimaryColor] = useState('#00000');
+  const [primaryColor, setPrimaryColor] = useState('#000000');
   const [selectedVector, setSelectedVector] = useState('');
+  const [previewSrc, setPreviewSrc] = useState('');
+  const [vectorOptions, setVectorOptions] = useState(['Select Vector']);
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPrimaryColor(e.target.value);
@@ -32,14 +40,40 @@ function App() {
 
   const handleVectorChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedVector(e.target.value);
+    updatePreview(e.target.value);
+  };
+
+  const updatePreview = (vector: string) => {
+    if (vector !== 'Select Vector') {
+      parent.postMessage({ pluginMessage: { type: 'get-svg-preview', vector } }, '*');
+    } else {
+      setPreviewSrc('');
+    }
   };
 
   const onPlaceIt = () => {
-    // Implement the logic to place the vector with the selected color
-    console.log('Placing vector:', selectedVector, 'with color:', primaryColor);
+    parent.postMessage({ pluginMessage: { type: 'place-svg', vector: selectedVector, color: primaryColor } }, '*');
   };
 
-  const vectorOptions = ["Select Vector", "Vector 1", "Vector 2", "Vector 3"]; // Add your vector options here
+  useEffect(() => {
+    // Request the list of SVGs from the plugin
+    parent.postMessage({ pluginMessage: { type: 'get-svg-list' } }, '*');
+
+    // Listen for messages from the plugin
+    window.onmessage = (event) => {
+      const message = event.data.pluginMessage;
+      if (message.type === 'svg-list') {
+        setVectorOptions(['Select Vector', ...message.vectors]);
+      } else if (message.type === 'svg-preview') {
+        setPreviewSrc(message.svgString);
+      } else if (message.type === 'svg-placed') {
+        console.log(message.message);
+      } else if (message.type === 'svg-preview-error' || message.type === 'svg-place-error') {
+        console.error(message.error);
+        // You might want to show an error message to the user here
+      }
+    };
+  }, []);
 
   return (
     <div className="container">
@@ -73,11 +107,11 @@ function App() {
       <div className="input-group">
         <label>PREVIEW</label>
         <div className="preview-box">
-          {/* Add preview logic here */}
+          {previewSrc && <div dangerouslySetInnerHTML={{ __html: previewSrc }} style={{width: '100%', height: '100%'}} />}
         </div>
       </div>
 
-      <button className="place-it-button" onClick={onPlaceIt}>
+      <button className="place-it-button" onClick={onPlaceIt} disabled={!selectedVector || selectedVector === "Select Vector"}>
         Place it
       </button>
     </div>
