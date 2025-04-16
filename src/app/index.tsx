@@ -4,6 +4,10 @@ import App from './components/App';
 
 document.addEventListener('DOMContentLoaded', function () {
   const container = document.getElementById('react-page');
-  const root = createRoot(container);
-  root.render(<App />);
+  if (container) {
+    const root = createRoot(container);
+    root.render(<App />);
+  } else {
+    console.error("Could not find container element with id 'react-page'");
+  }
 });

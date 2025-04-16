@@ -1,11 +1,16 @@
-
-
 figma.showUI(__html__);
 figma.ui.resize(326, 540);
 
 const svgFiles = ['Vector.svg', 'Vector-1.svg'];
 
-figma.ui.onmessage = async (msg) => {
+// Define a type for the messages coming from the UI
+// This helps with type checking and autocompletion
+type PluginMessage = 
+  | { type: 'get-svg-list' } 
+  | { type: 'get-svg-preview', vector: string }
+  | { type: 'place-svg', vector: string, color: string };
+
+figma.ui.onmessage = async (msg: PluginMessage) => {
   if (msg.type === 'get-svg-list') {
     figma.ui.postMessage({ type: 'svg-list', vectors: svgFiles });
   } else if (msg.type === 'get-svg-preview') {
@@ -27,8 +32,9 @@ figma.ui.onmessage = async (msg) => {
       
       // Set the color
       const rgb = hexToRgb(color);
-      node.children.forEach(child => {
-        if (child.type === 'VECTOR') {
+      // Add type assertion for node.children
+      (node.children as SceneNode[]).forEach((child: SceneNode) => {
+        if (child.type === 'VECTOR' && 'fills' in child) { // Check if child has fills property
           child.fills = [{ type: 'SOLID', color: rgb }];
         }
       });
